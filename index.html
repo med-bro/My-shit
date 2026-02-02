@@ -2,7 +2,8 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Weekly Study Tracker</title>
+<title>Advanced Study Tracker</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -46,28 +47,29 @@ button { width:100%; padding:5px; }
 <canvas id="mathDonut"></canvas>
 <canvas id="pcDonut"></canvas>
 <canvas id="svtDonut"></canvas>
+
+<canvas id="lineChart"></canvas>
 </div>
 
 <script>
 
-// ===== FIXED POINTS (YOUR EXACT RULES) =====
+// ===== FIXED POINTS =====
 
-const math = [20,20,20,40];
-const pc   = [25,20,35,20];
-const svt  = [20,20,45,15];
+const mathPoints = [20,20,20,40];
+const pcPoints   = [25,20,35,20];
+const svtPoints  = [20,20,45,15];
 
-// storage for pressed sessions
+// storage arrays
 let data = {
 math: Array(16).fill(0),
 pc:   Array(16).fill(0),
 svt:  Array(16).fill(0)
 };
 
-// show current month
 document.getElementById("title").innerText =
 "Monthly Progress - " + new Date().toLocaleString('default',{month:'long'});
 
-// build table row
+// build table rows
 function buildRow(name, arr){
 
 let html = `<tr><td><b>${name}</b></td>`;
@@ -76,9 +78,9 @@ for(let i=0;i<16;i++){
 
 let points;
 
-if(name=="Math") points = math[i%4];
-if(name=="PC")   points = pc[i%4];
-if(name=="SVT")  points = svt[i%4];
+if(name=="Math") points = mathPoints[i%4];
+if(name=="PC")   points = pcPoints[i%4];
+if(name=="SVT")  points = svtPoints[i%4];
 
 html += `<td>
 <button onclick="press('${name.toLowerCase()}',${i},${points})">
@@ -92,50 +94,134 @@ html += "</tr>";
 return html;
 }
 
-// create table
 document.getElementById("tableBody").innerHTML =
 buildRow("Math") +
 buildRow("PC") +
 buildRow("SVT");
 
-// when user presses a session button
+
+// when press session
 function press(science,index,points){
 
-data[science][index] = points;
+// divide by 4 and convert to %
+let percent = points / 4;
+
+data[science][index] = percent;
 
 updateCharts();
 }
 
-// helper sum function
+
+// sum helper
 function sum(a){ return a.reduce((x,y)=>x+y,0); }
 
-// ====== DONUT CHARTS ======
+
+// ===== DONUT CHARTS =====
 
 let mathChart = new Chart(document.getElementById("mathDonut"),{
 type:"doughnut",
-data:{ labels:["Math"], datasets:[{ data:[0,100] }] },
+data:{
+labels:["Math Done","Remaining"],
+datasets:[{
+data:[0,100],
+backgroundColor:["red","lightgray"]
+}]
+},
 options:{ plugins:{ title:{ display:true, text:"Math Progress"} } }
 });
 
 let pcChart = new Chart(document.getElementById("pcDonut"),{
 type:"doughnut",
-data:{ labels:["PC"], datasets:[{ data:[0,100] }] },
+data:{
+labels:["PC Done","Remaining"],
+datasets:[{
+data:[0,100],
+backgroundColor:["green","lightgray"]
+}]
+},
 options:{ plugins:{ title:{ display:true, text:"PC Progress"} } }
 });
 
 let svtChart = new Chart(document.getElementById("svtDonut"),{
 type:"doughnut",
-data:{ labels:["SVT"], datasets:[{ data:[0,100] }] },
+data:{
+labels:["SVT Done","Remaining"],
+datasets:[{
+data:[0,100],
+backgroundColor:["blue","lightgray"]
+}]
+},
 options:{ plugins:{ title:{ display:true, text:"SVT Progress"} } }
 });
 
-// update charts
+
+// ===== LINE CHART =====
+
+let lineChart = new Chart(document.getElementById("lineChart"),{
+
+type:"line",
+
+data:{
+
+labels:[
+"1","2","3","4","5","6","7","8",
+"9","10","11","12","13","14","15","16"
+],
+
+datasets:[
+
+{
+label:"Math",
+data:data.math,
+borderColor:"red",
+fill:false
+},
+
+{
+label:"PC",
+data:data.pc,
+borderColor:"green",
+fill:false
+},
+
+{
+label:"SVT",
+data:data.svt,
+borderColor:"blue",
+fill:false
+}
+
+]
+
+},
+
+options:{
+plugins:{
+title:{
+display:true,
+text:"Progress Over Sessions (%)"
+}
+},
+scales:{
+y:{
+min:0,
+max:25
+}
+}
+}
+
+});
+
+
+// ===== UPDATE ALL CHARTS =====
+
 function updateCharts(){
 
 let m = sum(data.math);
 let p = sum(data.pc);
 let s = sum(data.svt);
 
+// update donuts
 mathChart.data.datasets[0].data = [m, 100-m];
 pcChart.data.datasets[0].data   = [p, 100-p];
 svtChart.data.datasets[0].data  = [s, 100-s];
@@ -143,9 +229,17 @@ svtChart.data.datasets[0].data  = [s, 100-s];
 mathChart.update();
 pcChart.update();
 svtChart.update();
+
+// update line chart
+lineChart.data.datasets[0].data = data.math;
+lineChart.data.datasets[1].data = data.pc;
+lineChart.data.datasets[2].data = data.svt;
+
+lineChart.update();
 }
 
-// ===== DAILY REMINDER AT 11:00 =====
+
+// ===== DAILY NOTIFICATION =====
 
 if(Notification.permission!="granted")
 Notification.requestPermission();
@@ -155,7 +249,7 @@ setInterval(()=>{
 let now = new Date();
 
 if(now.getHours()==11 && now.getMinutes()==0){
-new Notification("Reminder: Enter your study points for today!");
+new Notification("Reminder: Enter today's study points!");
 }
 
 },60000);
