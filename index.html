@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Study Progress Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body { font-family: Arial; background:#f2f2f2; padding:10px; }
+table { width:100%; border-collapse:collapse; margin-top:10px; }
+th, td { border:1px solid #ccc; padding:6px; text-align:center; }
+button { padding:5px; width:100%; }
+.charts { margin-top:20px; }
+</style>
+
+</head>
+<body>
+
+<h2 id="monthTitle"></h2>
+
+<table>
+<thead>
+<tr>
+<th>Day</th>
+
+<th>M1</th><th>M2</th><th>M3</th><th>M4</th>
+<th>PC1</th><th>PC2</th><th>PC3</th><th>PC4</th>
+<th>S1</th><th>S2</th><th>S3</th><th>S4</th>
+
+</tr>
+</thead>
+
+<tbody id="table"></tbody>
+</table>
+
+<div class="charts">
+<canvas id="donut"></canvas>
+<canvas id="line"></canvas>
+</div>
+
+<script>
+
+const mathPoints = [20,20,20,40];
+const pcPoints   = [25,20,35,20];
+const svtPoints  = [20,20,45,15];
+
+let data = {};
+
+const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+let today = new Date();
+let month = today.getMonth();
+
+document.getElementById("monthTitle").innerText =
+"Progress for " + monthNames[month];
+
+let days = new Date(today.getFullYear(), month+1, 0).getDate();
+
+let table = document.getElementById("table");
+
+for(let d=1; d<=days; d++){
+
+data[d] = {
+math:[0,0,0,0],
+pc:[0,0,0,0],
+svt:[0,0,0,0]
+};
+
+let row = "<tr><td>"+d+"</td>";
+
+for(let i=0;i<4;i++)
+row += `<td><button onclick="add('math',${d},${i})">${mathPoints[i]}</button></td>`;
+
+for(let i=0;i<4;i++)
+row += `<td><button onclick="add('pc',${d},${i})">${pcPoints[i]}</button></td>`;
+
+for(let i=0;i<4;i++)
+row += `<td><button onclick="add('svt',${d},${i})">${svtPoints[i]}</button></td>`;
+
+row += "</tr>";
+
+table.innerHTML += row;
+}
+
+function add(sub, day, session){
+
+let p;
+
+if(sub=="math") p = mathPoints[session];
+if(sub=="pc")   p = pcPoints[session];
+if(sub=="svt")  p = svtPoints[session];
+
+data[day][sub][session] = p;
+
+update();
+}
+
+let donut = new Chart(document.getElementById("donut"),{
+type:"doughnut",
+data:{
+labels:["Math","PC","SVT"],
+datasets:[{ data:[0,0,0] }]
+}
+});
+
+let line = new Chart(document.getElementById("line"),{
+type:"line",
+data:{
+labels:[...Array(days).keys()],
+datasets:[
+{ label:"Math", data:[], borderColor:"red" },
+{ label:"PC", data:[], borderColor:"blue" },
+{ label:"SVT", data:[], borderColor:"green" }
+]
+}
+});
+
+function update(){
+
+let math=0, pc=0, svt=0;
+
+let mathLine=[], pcLine=[], svtLine=[];
+
+for(let d=1; d<=days; d++){
+
+math += data[d].math.reduce((a,b)=>a+b,0);
+pc   += data[d].pc.reduce((a,b)=>a+b,0);
+svt  += data[d].svt.reduce((a,b)=>a+b,0);
+
+mathLine.push(math);
+pcLine.push(pc);
+svtLine.push(svt);
+}
+
+donut.data.datasets[0].data=[math,pc,svt];
+donut.update();
+
+line.data.datasets[0].data = mathLine;
+line.data.datasets[1].data = pcLine;
+line.data.datasets[2].data = svtLine;
+
+line.update();
+}
+
+update();
+
+// daily reminder
+
+if(Notification.permission!="granted")
+Notification.requestPermission();
+
+setInterval(()=>{
+
+let now=new Date();
+
+if(now.getHours()==11 && now.getMinutes()==0)
+new Notification("Enter your study points!");
+
+},60000);
+
+</script>
+
+</body>
+</html>
